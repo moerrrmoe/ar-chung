@@ -164,10 +164,6 @@ PROMPT;
                 role: RoleType::USER
             )],
             model: "deepseek/deepseek-v4.1-flash",
-            provider: new ProviderPreferencesData(
-                only: ['open-inference/fp4', 'morph/fp8'],
-                allow_fallbacks: true,
-            ),
             response_format: new ResponseFormatData(
                 type: "json_schema",
                 json_schema: [
