@@ -13,8 +13,16 @@ Route::get('/user', function (Request $request) {
 Route::post('/chat/extract', [ChatController::class, 'extract']);
 
 Route::post('/webhook', function (Request $request) {
-    $handler = new BotHandler();
-    $bot = Telegram::bot(env('TELEGRAM_BOT_TOKEN'));
-    $update_content = file_get_contents('php://input');
-    $handler->handleRequest($bot, $update_content);
+    response('done', 200)->send();
+    try {
+        $handler = new BotHandler();
+        $bot = Telegram::bot(env('TELEGRAM_BOT_TOKEN'));
+        $update_content = file_get_contents('php://input');
+        $handler->handleRequest($bot, $update_content);
+    } catch (\Throwable $e) {
+        \Illuminate\Support\Facades\Log::error('Webhook error: ' . $e->getMessage(), [
+            'exception' => $e,
+        ]);
+    }
+    exit;
 });
