@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('whitelists', function (Blueprint $table) {
             $table->id();
+            $table->string('group_user');
             $table->timestamps();
         });
     }
