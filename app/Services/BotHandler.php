@@ -161,8 +161,8 @@ class BotHandler extends UpdateHandler
             'role' => 'assistant',
             'content' => $ai_reply,
         ];
-        if (count($chat_history) > 15) {
-            $chat_history = array_slice($chat_history, -15);
+        if (count($chat_history) > 4) {
+            $chat_history = array_slice($chat_history, -4);
         }
         Cache::put('chat_history_' . $this->chatId(), $chat_history, 15 * 60);
     }
