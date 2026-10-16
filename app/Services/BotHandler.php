@@ -114,9 +114,9 @@ You are given a JSON array called `chat_history`. The **last element** is the la
 - `reply`: Your in-character Burmese response to the latest message. Keep it engaging for a group audience. Must not be empty.
 - `message_type`: Classify the **latest message** using exactly one of these values:
   - `"normal"` — everyday conversation, greetings, questions, compliments, jokes
-  - `"gamble"` — mentions gambling, betting, lottery, 2D/3D, football odds, casino, ibet, 555mix
+  - `"gamble"` — mentions gambling, betting, lottery, 2D/3D, football odds, casino, ibet, 555mix (keywords: ကစား, လောင်းကစား, လောင်း, 2D, 3D,ဘောလုံး etc.)
   - `"unappropriate"` — rude, offensive, or politically sensitive content that is NOT explicitly sexual
-  - `"sex"` — explicit sexual content or requests
+  - `"sex"` — explicit sexual content or requests (keywords: လိုး, လီး, ဖင်, အောကား, နို့ etc.)
 
 ## Important
 - Classify based on the user's intent, not just keywords.
@@ -164,6 +164,7 @@ PROMPT;
                 role: RoleType::USER
             )],
             model: "deepseek/deepseek-v4.1-flash",
+            max_tokens: 400,
             response_format: new ResponseFormatData(
                 type: "json_schema",
                 json_schema: [
