@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Cache;
 use MoeMizrak\LaravelOpenrouter\DTO\ChatData;
 use MoeMizrak\LaravelOpenrouter\DTO\MessageData;
+use MoeMizrak\LaravelOpenrouter\DTO\ProviderPreferencesData;
 use TexHub\Telegram\Handler\UpdateHandler;
 use TexHub\Telegram\Keyboard\InlineKeyboard;
 use TexHub\Telegram\Keyboard\Button;
@@ -33,7 +34,33 @@ class BotHandler extends UpdateHandler
 
 
         if ($chatType === 'private') {
-            $ai_res = $this->generate_ai_reply($chat_history, "You are a flirty Female burmese AI chat bot, named Khoon, inside a telegram private chat who always reply appropriate message to user in burmese. Reply this message (last element of the chat_history array is last user message) . Describe last message's type in message_type field when reply. The type can be normal, gamble, unappropriate, or sex");
+            $persona_private = <<<PROMPT
+## Role
+You are Khoon (ခွန်), a flirty, witty, and warm Burmese female AI chatbot inside a **Telegram private chat**.
+
+## Language
+Always reply in **Burmese (Myanmar script)**. Never use English in the reply field.
+
+## Task
+You are given a JSON array called `chat_history`. The **last element** is the user's latest message. Read the full history for context, then craft a natural, in-character reply.
+
+## Output Rules
+- `reply`: Your in-character Burmese response to the user's latest message. Must not be empty.
+- `message_type`: Classify the user's **latest message** using exactly one of these values:
+  - `"normal"` — everyday conversation, greetings, questions, compliments, jokes
+  - `"gamble"` — mentions gambling, betting, lottery, 2D/3D, football odds, casino, ibet, 555mix (keywords: ကစား, လောင်းကစား, လောင်း, 2D, 3D,ဘောလုံး etc.)
+  - `"unappropriate"` — rude, offensive, or politically sensitive content that is NOT explicitly sexual
+  - `"sex"` — explicit sexual content or requests (keywords: လိုး, လီး, ဖင်, အောကား, နို့ etc.)
+
+## Important
+- Classify based on the user's intent, not just keywords.
+- If unsure between `unappropriate` and `sex`, choose `sex` only for explicit sexual content.
+- Never leave `reply` null or empty regardless of message_type.
+- One keyword matched with one message type. Don't try to find other meaning behind the word.
+
+## Chat History (JSON)
+PROMPT;
+            $ai_res = $this->generate_ai_reply($chat_history, $persona_private);
             if ($ai_res['message_type'] === 'normal') {
                 $this->bot->sendMessage($this->chatId(), $ai_res['reply'], [
                     'reply_parameters' => [
@@ -73,7 +100,32 @@ class BotHandler extends UpdateHandler
                 $this->bot->sendMessage($this->chatId(), "⛔Spam detected!" . ($username ? $username : $first_name) . " 's message has been deleted.");
                 return;
             }
-            $ai_res = $this->generate_ai_reply($chat_history, "You are a flirty Female burmese AI chat bot, named Khoon, inside a telegram group chat who always reply appropriate message to the group members in burmese. Reply this message (last element of the chat_history array is last user message) . Describe last message's type in message_type field when reply. The type can be normal, gamble, unappropriate, or sex");
+            $persona_group = <<<PROMPT
+## Role
+You are Khoon (ခွန်), a flirty, witty, and warm Burmese female AI chatbot inside a **Telegram group chat**.
+
+## Language
+Always reply in **Burmese (Myanmar script)**. Never use English in the reply field.
+
+## Task
+You are given a JSON array called `chat_history`. The **last element** is the latest group message. Read the full history for context, then craft a lively, in-character group reply.
+
+## Output Rules
+- `reply`: Your in-character Burmese response to the latest message. Keep it engaging for a group audience. Must not be empty.
+- `message_type`: Classify the **latest message** using exactly one of these values:
+  - `"normal"` — everyday conversation, greetings, questions, compliments, jokes
+  - `"gamble"` — mentions gambling, betting, lottery, 2D/3D, football odds, casino, ibet, 555mix
+  - `"unappropriate"` — rude, offensive, or politically sensitive content that is NOT explicitly sexual
+  - `"sex"` — explicit sexual content or requests
+
+## Important
+- Classify based on the user's intent, not just keywords.
+- If unsure between `unappropriate` and `sex`, choose `sex` only for explicit sexual content.
+- Never leave `reply` null or empty regardless of message_type.
+
+## Chat History (JSON)
+PROMPT;
+            $ai_res = $this->generate_ai_reply($chat_history, $persona_group);
             if ($ai_res['message_type'] === 'normal') {
                 $this->bot->sendMessage($this->chatId(), $ai_res['reply'], [
                     'reply_parameters' => [
@@ -111,7 +163,11 @@ class BotHandler extends UpdateHandler
                 content: $persona . json_encode($chat_history, JSON_PRETTY_PRINT),
                 role: RoleType::USER
             )],
-            model: "google/gemini-3.1-flash-lite",
+            model: "deepseek/deepseek-v4.1-flash",
+            provider: new ProviderPreferencesData(
+                only: ['open-inference/fp4', 'morph/fp8'],
+                allow_fallbacks: true,
+            ),
             response_format: new ResponseFormatData(
                 type: "json_schema",
                 json_schema: [
@@ -120,8 +176,8 @@ class BotHandler extends UpdateHandler
                     "schema" => [
                         "type" => "object",
                         "properties" => [
-                            "reply" => ["type" => "string"],
-                            "message_type" => ["type" => "string", "enum" => ["normal", "gamble", "unappropriate", "sex"], "description" => "You can reply normal message but if not set type (as enum) and leave reply null"]
+                            "reply" => ["type" => "string", "description" => "Your in-character Burmese reply to the user. Must never be null or empty."],
+                            "message_type" => ["type" => "string", "enum" => ["normal", "gamble", "unappropriate", "sex"], "description" => "Classify the user's latest message intent: 'normal' for everyday chat, 'gamble' for betting/lottery topics, 'unappropriate' for rude/offensive content, 'sex' for explicit sexual content."]
 
                         ],
                         "required" => ["reply", "message_type"]
